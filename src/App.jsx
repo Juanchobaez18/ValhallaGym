@@ -340,7 +340,7 @@ function App() {
                 />
               </div>
 
-              <div className="form-group">
+              <div className="form-group" style={{ marginBottom: '4px' }}>
                 <label>Contraseña Sagrada</label>
                 <input
                   type="password"
@@ -350,6 +350,16 @@ function App() {
                   onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
                   placeholder="Ingresa tu clave..."
                 />
+              </div>
+              <div style={{ textAlign: 'right', marginBottom: '16px' }}>
+                <a 
+                  href={`https://wa.me/573228672583?text=${encodeURIComponent('Hola, olvidé la contraseña de mi cuenta ' + (loginForm.username || '') + '. ¿Me pueden ayudar a restablecerla?')}`}
+                  target="_blank" 
+                  rel="noreferrer"
+                  style={{ fontSize: '0.8rem', color: 'var(--color-teal-bright)', textDecoration: 'underline' }}
+                >
+                  ¿Olvidaste tu contraseña?
+                </a>
               </div>
 
               <button type="submit" className="btn btn-primary" id="btn-auth-submit" style={{ width: '100%', marginTop: '12px' }}>

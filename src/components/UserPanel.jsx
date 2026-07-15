@@ -97,6 +97,45 @@ export default function UserPanel({ currentUser, products, orders, setOrders, on
     }
   };
 
+  const [passwordForm, setPasswordForm] = useState({ current: '', new: '', confirm: '' });
+  const [passwordStatus, setPasswordStatus] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+
+  const handlePasswordUpdate = async (e) => {
+    e.preventDefault();
+    if (passwordForm.new !== passwordForm.confirm) {
+      setPasswordError('Las nuevas contraseñas no coinciden');
+      return;
+    }
+    if (passwordForm.new.length < 6) {
+      setPasswordError('La contraseña debe tener al menos 6 caracteres');
+      return;
+    }
+    setPasswordError('');
+    setPasswordStatus('');
+    try {
+      const token = localStorage.getItem('valhalla_token');
+      const res = await fetch(`${API_BASE_URL}/api/auth/me/password`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ currentPassword: passwordForm.current, newPassword: passwordForm.new })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setPasswordStatus('✓ ' + data.message);
+        setPasswordForm({ current: '', new: '', confirm: '' });
+        setTimeout(() => setPasswordStatus(''), 4000);
+      } else {
+        setPasswordError(data.error || 'Error al actualizar contraseña');
+      }
+    } catch (err) {
+      setPasswordError('Error de conexión');
+    }
+  };
+
   const handleCafeOrderSubmit = async () => {
     if (cafeCart.length === 0) return;
     setIsOrderingCafe(true);
@@ -318,21 +357,42 @@ export default function UserPanel({ currentUser, products, orders, setOrders, on
                     background: 'rgba(239, 68, 68, 0.1)',
                     border: '1px solid rgba(239, 68, 68, 0.25)',
                     color: '#fca5a5',
-                    padding: '6px 16px',
-                    borderRadius: '20px',
-                    cursor: 'pointer',
-                    fontSize: '0.8rem',
-                    fontWeight: '600',
-                    transition: 'all 0.2s'
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'}
-                >
+                    padding: '6px 16px', borderRadius: 'var(--border-radius-sm)',
+                    fontSize: '0.8rem', cursor: 'pointer', fontFamily: 'var(--font-heading)',
+                    textTransform: 'uppercase', fontStyle: 'italic', letterSpacing: '1px'
+                  }}>
                   Cerrar Sesión ⏻
                 </button>
               </div>
             )}
           </div>
+        </div>
+
+        {/* Change Password Section */}
+        <div className="glass" style={{ padding: '24px', borderRadius: 'var(--border-radius-md)', border: '1px solid rgba(255,255,255,0.05)', marginBottom: '40px' }}>
+          <h3 style={{ color: '#fff', fontSize: '1.2rem', fontFamily: 'var(--font-heading)', textTransform: 'uppercase', fontStyle: 'italic', letterSpacing: '1px', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '12px', margin: '0 0 20px 0' }}>
+            🔑 Seguridad y Acceso
+          </h3>
+          
+          <form onSubmit={handlePasswordUpdate} style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: '400px' }}>
+            {passwordError && <div style={{ color: '#f87171', fontSize: '0.85rem', background: 'rgba(239,68,68,0.1)', padding: '8px', borderRadius: '4px' }}>{passwordError}</div>}
+            {passwordStatus && <div style={{ color: '#34d399', fontSize: '0.85rem', background: 'rgba(16,185,129,0.1)', padding: '8px', borderRadius: '4px' }}>{passwordStatus}</div>}
+            
+            <div className="form-group" style={{ margin: 0 }}>
+              <label style={{ fontSize: '0.85rem' }}>Contraseña Actual</label>
+              <input type="password" required value={passwordForm.current} onChange={e => setPasswordForm({...passwordForm, current: e.target.value})} style={{ padding: '8px', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff' }} placeholder="Tu clave actual..." />
+            </div>
+            <div className="form-group" style={{ margin: 0 }}>
+              <label style={{ fontSize: '0.85rem' }}>Nueva Contraseña</label>
+              <input type="password" required value={passwordForm.new} onChange={e => setPasswordForm({...passwordForm, new: e.target.value})} style={{ padding: '8px', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff' }} placeholder="Nueva clave..." />
+            </div>
+            <div className="form-group" style={{ margin: 0 }}>
+              <label style={{ fontSize: '0.85rem' }}>Confirmar Nueva Contraseña</label>
+              <input type="password" required value={passwordForm.confirm} onChange={e => setPasswordForm({...passwordForm, confirm: e.target.value})} style={{ padding: '8px', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff' }} placeholder="Repite la nueva clave..." />
+            </div>
+            
+            <button type="submit" className="btn btn-primary" style={{ marginTop: '8px', padding: '10px' }}>Actualizar Contraseña</button>
+          </form>
         </div>
 
         {/* Banner de Membresía */}

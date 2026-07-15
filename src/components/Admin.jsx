@@ -385,6 +385,24 @@ export default function Admin({ products, setProducts, plans, setPlans, features
     } catch (err) { console.error('Error deleting user:', err); }
   };
 
+  const handleResetPassword = async (userId, username) => {
+    if (!window.confirm(`¿Estás seguro de que quieres restablecer la contraseña de ${username} a la clave por defecto "valhalla2026"?`)) return;
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/admin/users/${userId}/reset-password`, {
+        method: 'POST',
+        headers: getHeaders()
+      });
+      const data = await res.json();
+      if (res.ok) {
+        alert(data.message);
+      } else {
+        alert(data.error || 'Error al restablecer la contraseña');
+      }
+    } catch (err) {
+      alert('Error de conexión');
+    }
+  };
+
   // Image Upload Handler
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
@@ -919,8 +937,9 @@ export default function Admin({ products, setProducts, plans, setPlans, features
                       {!u.medical_conditions && !u.surgeries && !u.emergency_contact && '—'}
                     </td>
                     <td style={{ ...tdStyle, textAlign: 'center' }}>
-                      <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
-                        <button onClick={() => handleEditUserClick(u)} style={{ ...btnStyle, background: 'rgba(20,184,166,0.1)', color: '#14b8a6', border: '1px solid rgba(20,184,166,0.25)' }}>Editar</button>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', justifyContent: 'center' }}>
+                        <button onClick={() => handleEditUserClick(u)} style={{ ...btnStyle, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>Editar</button>
+                        <button onClick={() => handleResetPassword(u.id, u.username)} style={{ ...btnStyle, background: 'rgba(245, 158, 11, 0.15)', color: '#fbbf24', border: '1px solid rgba(245, 158, 11, 0.3)' }}>🔑 Reset Clave</button>
                         {u.role !== 'admin' && (
                           <button onClick={() => handleDeleteUser(u.id)} style={{ ...btnStyle, background: 'rgba(239,68,68,0.08)', color: '#f87171', border: '1px solid rgba(239,68,68,0.2)' }}>Eliminar</button>
                         )}
