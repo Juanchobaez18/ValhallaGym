@@ -1684,3 +1684,9 @@ a {
     grid-template-columns: 1fr;
   }
 }
+
+/* Fix for dropdown select options in dark mode */
+select option {
+  background-color: #1a1a1a;
+  color: #ffffff;
+}
