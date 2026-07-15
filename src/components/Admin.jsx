@@ -664,7 +664,7 @@ export default function Admin({ products, setProducts, plans, setPlans, features
                   <h3 style={{ color: '#fff', fontSize: '0.95rem', fontWeight: '700', margin: 0 }}>📦 Pedidos de Tienda Recientes</h3>
                   <button onClick={() => setActiveSection('orders')} style={{ background: 'none', border: 'none', color: '#14b8a6', fontSize: '0.82rem', cursor: 'pointer', fontWeight: '600' }}>Ver Todos →</button>
                 </div>
-                <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: '16px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.05)' }}>
+                <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: '16px', overflowX: 'auto', border: '1px solid rgba(255,255,255,0.05)' }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <tbody>
                       {storeOrders.slice(0, 3).map(ord => (
@@ -1135,7 +1135,7 @@ export default function Admin({ products, setProducts, plans, setPlans, features
               </div>
 
               {/* Register Payment Form */}
-              <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '16px', overflow: 'hidden' }}>
+              <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '16px', overflowX: 'auto' }}>
                 <div style={{ padding: '20px 24px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                   <h3 style={{ color: '#fff', fontSize: '0.95rem', fontWeight: '700', margin: 0 }}>💰 Registrar Cobro de Mensualidad</h3>
                   <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.75rem', marginTop: '4px', marginBottom: 0 }}>Esto renovará la membresía del usuario por 30 días</p>
@@ -1290,7 +1290,7 @@ export default function Admin({ products, setProducts, plans, setPlans, features
                     })()}
 
                     {/* History Table */}
-                    <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '16px', overflow: 'hidden' }}>
+                    <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '16px', overflowX: 'auto' }}>
                       <div style={{ padding: '14px 20px', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <h3 style={{ color: '#fff', fontSize: '0.88rem', fontWeight: '700', margin: 0 }}>
                           Historial — @{users.find(u => u.id === selectedUserId)?.username}
@@ -1610,7 +1610,7 @@ const inputStyle = { width: '100%', background: 'rgba(255,255,255,0.05)', border
 
 function AdminTable({ title, columns, children }) {
   return (
-    <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '16px', overflow: 'hidden' }}>
+    <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '16px', overflowX: 'auto' }}>
       {title && (
         <div style={{ padding: '20px 24px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
           <h3 style={{ color: '#fff', fontSize: '0.95rem', fontWeight: '700', margin: 0 }}>{title}</h3>

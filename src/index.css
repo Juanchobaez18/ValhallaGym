@@ -1680,6 +1680,201 @@ a {
   .grid-responsive-2,
   .grid-responsive-3,
   .grid-2,
+.btn-remove {
+  background: none;
+  border: none;
+  color: var(--color-text-dim);
+  font-size: 0.78rem;
+  cursor: pointer;
+  text-decoration: underline;
+  transition: var(--transition-fast);
+}
+.btn-remove:hover {
+  color: #f87171;
+}
+
+.cart-footer {
+  border-top: 1px solid rgba(255,255,255,0.04);
+  padding-top: 20px;
+}
+.cart-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-size: 1.4rem;
+  margin-bottom: 24px;
+}
+.cart-total-price {
+  color: var(--color-teal-bright);
+}
+.cart-checkout-form {
+  text-align: left;
+}
+.cart-checkout-form h3 {
+  font-family: var(--font-subheading);
+  font-weight: 700;
+  font-style: italic;
+  font-size: 0.95rem;
+  margin-bottom: 16px;
+  color: var(--color-teal-bright);
+}
+.cart-checkout-form .form-group {
+  margin-bottom: 12px;
+}
+.btn-checkout {
+  width: 100%;
+  margin-top: 10px;
+  background: #25d366;
+  border: 1px solid #4ade80;
+  box-shadow: 0 4px 15px rgba(37, 211, 102, 0.2);
+  color: #fff;
+}
+.btn-checkout:hover {
+  background: #20ba59;
+  border-color: #fff;
+  box-shadow: 0 0 20px rgba(37, 211, 102, 0.4);
+}
+
+/* Footer Component */
+.footer {
+  border-top: 1px solid rgba(21, 128, 61, 0.15);
+  padding: 70px 0 25px;
+  margin-top: 90px;
+}
+.footer-container {
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+}
+.footer-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 400px;
+  margin: 0 auto;
+}
+.brand-description {
+  margin-top: 16px;
+  font-size: 0.9rem;
+}
+.footer-links-group {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 40px;
+  text-align: left;
+}
+.footer-column h4 {
+  font-family: var(--font-subheading);
+  font-weight: 700;
+  font-style: italic;
+  font-size: 1rem;
+  margin-bottom: 20px;
+  color: var(--color-gold);
+}
+.footer-column ul {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.footer-column ul li button {
+  background: none;
+  border: none;
+  color: var(--color-text-dim);
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  text-align: left;
+}
+.footer-column ul li button:hover {
+  color: var(--color-teal-bright);
+}
+.footer-column ul li span {
+  font-weight: 700;
+  color: var(--color-text-light);
+}
+.social-runes {
+  display: flex;
+  gap: 16px;
+  margin-top: 16px;
+  font-size: 1.1rem;
+}
+.social-runes span {
+  cursor: pointer;
+  color: var(--color-text-dim);
+  transition: var(--transition-fast);
+}
+.social-runes span:hover {
+  color: var(--color-teal-bright);
+}
+.footer-bottom {
+  border-top: 1px solid rgba(255, 255, 255, 0.03);
+  margin-top: 40px;
+  padding-top: 20px;
+  font-size: 0.8rem;
+}
+.runic-seal {
+  display: block;
+  margin-top: 8px;
+  font-size: 1.1rem;
+  font-family: var(--font-heading);
+  color: var(--color-teal);
+  opacity: 0.3;
+  letter-spacing: 5px;
+}
+
+@media (max-width: 768px) {
+  .footer-links-group {
+    grid-template-columns: 1fr;
+    text-align: center;
+  }
+  .footer-column ul li button {
+    text-align: center;
+    width: 100%;
+  }
+}
+
+/* Responsive Grid Utilities */
+.grid-responsive-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.grid-responsive-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 16px;
+}
+.grid-responsive-sidebar-left {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 20px;
+}
+.grid-responsive-sidebar-right {
+  display: grid;
+  grid-template-columns: 1fr 440px;
+  gap: 24px;
+}
+.grid-responsive-sidebar-right-sm {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 24px;
+}
+
+@media (max-width: 992px) {
+  .grid-responsive-sidebar-left,
+  .grid-responsive-sidebar-right,
+  .grid-responsive-sidebar-right-sm {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .grid-responsive-2,
+  .grid-responsive-3,
+  .grid-2,
   .grid-3 {
     grid-template-columns: 1fr;
   }
@@ -1687,6 +1882,11 @@ a {
 
 /* Fix for dropdown select options in dark mode */
 select option {
-  background-color: #1a1a1a;
-  color: #ffffff;
+  background-color: #1a1a1a !important;
+  color: #ffffff !important;
+}
+
+/* Fallback for browsers that don't allow styling options background */
+select {
+  color-scheme: dark;
 }

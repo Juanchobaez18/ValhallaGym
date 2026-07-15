@@ -28,8 +28,11 @@ function App() {
   
   // Login Modal states
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showRecovery, setShowRecovery] = useState(false);
   const [loginForm, setLoginForm] = useState({ username: '', password: '' });
+  const [recoveryForm, setRecoveryForm] = useState({ username: '', phone: '', newPassword: '' });
   const [authError, setAuthError] = useState('');
+  const [authSuccess, setAuthSuccess] = useState('');
 
   // Fetch initial data from SQLite backend API
   const fetchData = async () => {
@@ -141,6 +144,36 @@ function App() {
 
   const handleRemoveItem = (id) => {
     setCartItems((prevItems) => prevItems.filter((item) => item.id !== id));
+  };
+
+  // Recovery handler
+  const handleRecoverySubmit = async (e) => {
+    e.preventDefault();
+    setAuthError('');
+    setAuthSuccess('');
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/auth/reset`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(recoveryForm)
+      });
+      
+      const data = await response.json();
+      if (!response.ok) {
+        setAuthError(data.error || 'Error al restaurar contraseña');
+        return;
+      }
+
+      setAuthSuccess(data.message);
+      setTimeout(() => {
+        setShowRecovery(false);
+        setAuthSuccess('');
+        setRecoveryForm({ username: '', phone: '', newPassword: '' });
+      }, 3000);
+    } catch (err) {
+      setAuthError('No se pudo conectar con la Forja (Servidor caído)');
+    }
   };
 
   // Login handler
@@ -316,60 +349,109 @@ function App() {
           <div className="modal-content glass" style={{ maxWidth: '420px' }}>
             <div className="modal-header">
               <h3 style={{ textTransform: 'uppercase', fontStyle: 'italic', fontFamily: 'var(--font-heading)', letterSpacing: '1px' }}>
-                Acceso al Valhalla
+                {showRecovery ? 'Restaurar Clave' : 'Acceso al Valhalla'}
               </h3>
-              <button className="modal-close" onClick={() => setShowLoginModal(false)}>✕</button>
+              <button className="modal-close" onClick={() => { setShowLoginModal(false); setShowRecovery(false); }}>✕</button>
             </div>
 
-            <form className="booking-form" onSubmit={handleLoginSubmit}>
-              {authError && (
-                <div style={{ padding: '12px', background: 'rgba(239, 68, 68, 0.15)', border: '1px solid #ef4444', color: '#fca5a5', fontSize: '0.82rem', borderRadius: 'var(--border-radius-sm)', textAlign: 'center' }}>
-                  {authError}
+            {authError && (
+              <div style={{ padding: '12px', background: 'rgba(239, 68, 68, 0.15)', border: '1px solid #ef4444', color: '#fca5a5', fontSize: '0.82rem', borderRadius: 'var(--border-radius-sm)', textAlign: 'center', marginBottom: '16px' }}>
+                {authError}
+              </div>
+            )}
+            {authSuccess && (
+              <div style={{ padding: '12px', background: 'rgba(52, 211, 153, 0.15)', border: '1px solid #34d399', color: '#6ee7b7', fontSize: '0.82rem', borderRadius: 'var(--border-radius-sm)', textAlign: 'center', marginBottom: '16px' }}>
+                {authSuccess}
+              </div>
+            )}
+
+            {!showRecovery ? (
+              <form className="booking-form" onSubmit={handleLoginSubmit}>
+                <div className="form-group">
+                  <label>Nombre de Guerrero</label>
+                  <input
+                    type="text"
+                    required
+                    id="auth-username-input"
+                    value={loginForm.username}
+                    onChange={(e) => setLoginForm({ ...loginForm, username: e.target.value })}
+                    placeholder="Ej: ragnar"
+                  />
                 </div>
-              )}
-              
-              <div className="form-group">
-                <label>Nombre de Guerrero</label>
-                <input
-                  type="text"
-                  required
-                  id="auth-username-input"
-                  value={loginForm.username}
-                  onChange={(e) => setLoginForm({ ...loginForm, username: e.target.value })}
-                  placeholder="Ej: ragnar"
-                />
-              </div>
 
-              <div className="form-group" style={{ marginBottom: '4px' }}>
-                <label>Contraseña Sagrada</label>
-                <input
-                  type="password"
-                  required
-                  id="auth-password-input"
-                  value={loginForm.password}
-                  onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
-                  placeholder="Ingresa tu clave..."
-                />
-              </div>
-              <div style={{ textAlign: 'right', marginBottom: '16px' }}>
-                <a 
-                  href={`https://wa.me/573228672583?text=${encodeURIComponent('Hola, olvidé la contraseña de mi cuenta ' + (loginForm.username || '') + '. ¿Me pueden ayudar a restablecerla?')}`}
-                  target="_blank" 
-                  rel="noreferrer"
-                  style={{ fontSize: '0.8rem', color: 'var(--color-teal-bright)', textDecoration: 'underline' }}
-                >
-                  ¿Olvidaste tu contraseña?
-                </a>
-              </div>
+                <div className="form-group" style={{ marginBottom: '4px' }}>
+                  <label>Contraseña Sagrada</label>
+                  <input
+                    type="password"
+                    required
+                    id="auth-password-input"
+                    value={loginForm.password}
+                    onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
+                    placeholder="Ingresa tu clave..."
+                  />
+                </div>
+                <div style={{ textAlign: 'right', marginBottom: '16px' }}>
+                  <button 
+                    type="button"
+                    onClick={() => { setShowRecovery(true); setAuthError(''); setAuthSuccess(''); }}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem', color: 'var(--color-teal-bright)', textDecoration: 'underline' }}
+                  >
+                    ¿Olvidaste tu contraseña?
+                  </button>
+                </div>
 
-              <button type="submit" className="btn btn-primary" id="btn-auth-submit" style={{ width: '100%', marginTop: '12px' }}>
-                <span>Iniciar Campaña ⚔️</span>
-              </button>
+                <button type="submit" className="btn btn-primary" id="btn-auth-submit" style={{ width: '100%', marginTop: '12px' }}>
+                  <span>Iniciar Campaña ⚔️</span>
+                </button>
 
-              <div style={{ textAlign: 'center', fontSize: '0.78rem', color: 'var(--color-text-dim)', marginTop: '8px' }}>
-                <span>El acceso es por invitación del Administrador.</span>
-              </div>
-            </form>
+                <div style={{ textAlign: 'center', fontSize: '0.78rem', color: 'var(--color-text-dim)', marginTop: '8px' }}>
+                  <span>El acceso es por invitación del Administrador.</span>
+                </div>
+              </form>
+            ) : (
+              <form className="booking-form" onSubmit={handleRecoverySubmit}>
+                <div className="form-group">
+                  <label>Tu Nombre de Guerrero</label>
+                  <input
+                    type="text"
+                    required
+                    value={recoveryForm.username}
+                    onChange={(e) => setRecoveryForm({ ...recoveryForm, username: e.target.value })}
+                    placeholder="Nombre registrado"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Tu Teléfono (Seguridad)</label>
+                  <input
+                    type="tel"
+                    required
+                    value={recoveryForm.phone}
+                    onChange={(e) => setRecoveryForm({ ...recoveryForm, phone: e.target.value })}
+                    placeholder="Ej: 57322..."
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Nueva Contraseña Sagrada</label>
+                  <input
+                    type="password"
+                    required
+                    value={recoveryForm.newPassword}
+                    onChange={(e) => setRecoveryForm({ ...recoveryForm, newPassword: e.target.value })}
+                    placeholder="Escribe tu nueva clave"
+                    minLength="6"
+                  />
+                </div>
+                
+                <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '12px', background: 'linear-gradient(135deg, #10b981, #059669)' }}>
+                  <span>Restaurar Clave</span>
+                </button>
+                <div style={{ textAlign: 'center', marginTop: '12px' }}>
+                  <button type="button" onClick={() => setShowRecovery(false)} style={{ background: 'none', border: 'none', color: 'var(--color-text-dim)', fontSize: '0.8rem', cursor: 'pointer', textDecoration: 'underline' }}>
+                    Volver al Inicio de Sesión
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}
