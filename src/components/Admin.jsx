@@ -12,6 +12,12 @@ export default function Admin({ products, setProducts, plans, setPlans, features
   const [userError, setUserError] = useState('');
   const [userSuccess, setUserSuccess] = useState('');
 
+  // Payments state
+  const [payments, setPayments] = useState([]);
+  const [paymentForm, setPaymentForm] = useState({ user_id: '', plan_id: '', amount: '', payment_date: new Date().toISOString().split('T')[0], notes: '' });
+  const [paymentSuccess, setPaymentSuccess] = useState('');
+  const [paymentError, setPaymentError] = useState('');
+
   // Measurements / Progress state
   const [measurements, setMeasurements] = useState([]);
   const [selectedUserId, setSelectedUserId] = useState('');
@@ -60,7 +66,7 @@ export default function Admin({ products, setProducts, plans, setPlans, features
       const hm = h / 100;
       const bmi = w / (hm * hm);
       r.bmi = bmi.toFixed(1);
-      if (bmi < 18.5) r.bmiCat = { label: 'Bajo peso', color: '#60a5fa', bg: 'rgba(96,165,250,0.12)' };
+      if (bmi < 18.5) r.bmiCat = { label: 'Bajo peso', color: '#4ade80', bg: 'rgba(74,222,128,0.12)' };
       else if (bmi < 25) r.bmiCat = { label: 'Normal ✓', color: '#34d399', bg: 'rgba(52,211,153,0.12)' };
       else if (bmi < 30) r.bmiCat = { label: 'Sobrepeso', color: '#fbbf24', bg: 'rgba(251,191,36,0.12)' };
       else if (bmi < 35) r.bmiCat = { label: 'Obesidad I', color: '#f87171', bg: 'rgba(248,113,113,0.12)' };
@@ -89,7 +95,7 @@ export default function Admin({ products, setProducts, plans, setPlans, features
     if (wt && h) {
       const ict = wt / h;
       r.ict = ict.toFixed(2);
-      if (ict < 0.40) r.ictRisk = { label: 'Muy delgado', color: '#60a5fa', bg: 'rgba(96,165,250,0.12)' };
+      if (ict < 0.40) r.ictRisk = { label: 'Muy delgado', color: '#4ade80', bg: 'rgba(74,222,128,0.12)' };
       else if (ict < 0.50) r.ictRisk = { label: 'Saludable ✓', color: '#34d399', bg: 'rgba(52,211,153,0.12)' };
       else if (ict < 0.60) r.ictRisk = { label: 'Sobrepeso', color: '#fbbf24', bg: 'rgba(251,191,36,0.12)' };
       else r.ictRisk = { label: 'Obesidad', color: '#f87171', bg: 'rgba(248,113,113,0.12)' };
@@ -157,9 +163,89 @@ export default function Admin({ products, setProducts, plans, setPlans, features
     } catch (err) { console.error('Error fetching users:', err); }
   };
 
+  const fetchPayments = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/admin/payments`, { headers: getHeaders() });
+      if (res.ok) setPayments(await res.json());
+    } catch (err) { console.error('Error fetching payments:', err); }
+  };
+
+  const handleSavePayment = async (e) => {
+    e.preventDefault();
+    setPaymentError(''); setPaymentSuccess('');
+    
+    const selectedUser = users.find(u => u.id === paymentForm.user_id);
+    const selectedPlan = plans.find(p => p.id === paymentForm.plan_id);
+
+    if (!selectedUser) {
+      setPaymentError('Por favor selecciona un guerrero válido');
+      return;
+    }
+
+    const payload = {
+      ...paymentForm,
+      username: selectedUser.username,
+      plan_name: selectedPlan ? selectedPlan.name : 'Membresía Personalizada'
+    };
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/admin/payments`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setPaymentError(data.error || 'Error al registrar el pago');
+        return;
+      }
+
+      setPaymentSuccess('✓ ¡Pago registrado correctamente! Membresía del guerrero actualizada.');
+      setPayments(prev => [data, ...prev]);
+      
+      setUsers(prev => prev.map(u => {
+        if (u.id === paymentForm.user_id) {
+          return {
+            ...u,
+            membership_plan_id: paymentForm.plan_id,
+            membership_start_date: paymentForm.payment_date,
+            membership_end_date: data.membership_end_date,
+            membership_status: 'active'
+          };
+        }
+        return u;
+      }));
+
+      setPaymentForm({
+        user_id: '',
+        plan_id: '',
+        amount: '',
+        payment_date: new Date().toISOString().split('T')[0],
+        notes: ''
+      });
+
+      setTimeout(() => setPaymentSuccess(''), 4000);
+    } catch (err) {
+      setPaymentError('No se pudo conectar con el servidor');
+    }
+  };
+
+  const handleDeletePayment = async (id) => {
+    if (!window.confirm('¿Seguro que deseas eliminar este registro de pago? Esto no revertirá las fechas del usuario de forma automática.')) return;
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/admin/payments/${id}`, { method: 'DELETE', headers: getHeaders() });
+      if (res.ok) {
+        setPayments(prev => prev.filter(p => p.id !== id));
+      }
+    } catch (err) {
+      console.error('Error deleting payment:', err);
+    }
+  };
+
   useEffect(() => {
     fetchUsers();
     fetchMeasurements();
+    fetchPayments();
   }, []);
 
   // Poll orders when on Cafe section
@@ -408,6 +494,7 @@ export default function Admin({ products, setProducts, plans, setPlans, features
   const sidebarItems = [
     { id: 'dashboard', icon: '⚡', label: 'Resumen' },
     { id: 'users', icon: '🛡️', label: 'Guerreros', count: users.length },
+    { id: 'payments', icon: '💰', label: 'Pagos e Ingresos', count: payments.length },
     { id: 'progress', icon: '📈', label: 'Progreso', count: measurements.length },
     { id: 'cafe_orders', icon: '👨‍🍳', label: 'Barra', count: pendingCafe },
     { id: 'orders', icon: '📦', label: 'Pedidos', count: pendingStore },
@@ -417,6 +504,7 @@ export default function Admin({ products, setProducts, plans, setPlans, features
   ];
 
   const totalRevenue = orders.reduce((sum, o) => sum + o.total, 0);
+  const totalPaymentsRevenue = payments.reduce((sum, p) => sum + p.amount, 0);
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: '#0a0c10', fontFamily: "'Inter', 'Segoe UI', sans-serif" }}>
@@ -546,7 +634,7 @@ export default function Admin({ products, setProducts, plans, setPlans, features
             return (
             <div>
               <div className="grid-responsive-2" style={{ gap: '24px' }}>
-                {renderStatCard('Usuarios', users.length, '🛡️', '#3b82f6', `${measurements.length} progresos`)}
+                {renderStatCard('Usuarios', users.length, '🛡️', '#22c55e', `${measurements.length} progresos`)}
                 {renderStatCard('Cafetería', pendingCafe, '👨‍🍳', '#f59e0b', `${cafeOrders.length} ordenes totales`)}
                 {renderStatCard('Pedidos Tienda', pendingStore, '📦', '#8b5cf6', `${storeOrders.length} totales`)}
                 {renderStatCard('Productos', products.length, '🛍️', '#14b8a6', `3 categorías`)}
@@ -615,7 +703,7 @@ export default function Admin({ products, setProducts, plans, setPlans, features
                         <button onClick={() => handleStatusUpdate(ord.id, 'delivered')} style={{ ...btnStyle, background: 'rgba(16,185,129,0.15)', color: '#34d399', border: '1px solid rgba(16,185,129,0.3)' }}>✓ Entregar</button>
                       )}
                       {ord.phone && (
-                        <button onClick={() => sendOrderPromo(ord)} style={{ ...btnStyle, background: 'rgba(59,130,246,0.15)', color: '#60a5fa', border: '1px solid rgba(59,130,246,0.3)' }}>💬 Promo</button>
+                        <button onClick={() => sendOrderPromo(ord)} style={{ ...btnStyle, background: 'rgba(34,197,94,0.15)', color: '#4ade80', border: '1px solid rgba(34,197,94,0.3)' }}>💬 Promo</button>
                       )}
                       <button onClick={() => handleDeleteTrigger(ord.id, 'orders')} style={{ ...btnStyle, background: 'rgba(239,68,68,0.1)', color: '#f87171', border: '1px solid rgba(239,68,68,0.2)' }}>Eliminar</button>
                     </div>
@@ -762,7 +850,7 @@ export default function Admin({ products, setProducts, plans, setPlans, features
           {activeSection === 'users' && (
             <div className="grid-responsive-sidebar-right-sm" style={{ alignItems: 'start' }}>
               {/* Users table */}
-              <AdminTable title="Usuarios Registrados" columns={['Usuario', 'Rol', 'Teléfono', 'Avisos Médicos', 'Acciones']}>
+              <AdminTable title="Usuarios Registrados" columns={['Usuario', 'Rol', 'Teléfono', 'Membresía', 'Ficha Médica', 'Acciones']}>
                 {users.map(u => (
                   <tr key={u.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}
                     onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
@@ -782,6 +870,48 @@ export default function Admin({ products, setProducts, plans, setPlans, features
                       </span>
                     </td>
                     <td style={{ ...tdStyle, color: 'rgba(255,255,255,0.6)', fontSize: '0.8rem' }}>{u.phone || '—'}</td>
+                    <td style={{ ...tdStyle, color: 'rgba(255,255,255,0.6)', fontSize: '0.8rem', verticalAlign: 'top' }}>
+                      {u.role === 'user' ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          <div style={{ fontSize: '0.8rem', color: '#e2e8f0' }}>
+                            <strong>Plan:</strong> {plans.find(p => p.id === u.membership_plan_id)?.name || 'Ninguno'}
+                          </div>
+                          <div>
+                            <span style={{ 
+                              background: u.membership_status === 'active' ? 'rgba(52,211,153,0.12)' : u.membership_status === 'expired' ? 'rgba(239,68,68,0.12)' : 'rgba(255,255,255,0.06)',
+                              color: u.membership_status === 'active' ? '#34d399' : u.membership_status === 'expired' ? '#f87171' : 'rgba(255,255,255,0.4)',
+                              padding: '2px 6px', borderRadius: '4px', fontSize: '0.65rem', fontWeight: '800', border: `1px solid ${u.membership_status === 'active' ? 'rgba(52,211,153,0.2)' : u.membership_status === 'expired' ? 'rgba(239,68,68,0.2)' : 'rgba(255,255,255,0.1)'}`
+                            }}>
+                              {u.membership_status === 'active' ? 'ACTIVA ✓' : u.membership_status === 'expired' ? 'VENCIDA ❌' : 'SIN PLAN'}
+                            </span>
+                          </div>
+                          {u.membership_end_date && (
+                            <div style={{ fontSize: '0.72rem', color: u.membership_status === 'expired' ? '#fca5a5' : 'rgba(255,255,255,0.45)' }}>
+                              Vence: <strong>{u.membership_end_date}</strong>
+                            </div>
+                          )}
+                          {u.phone && u.membership_status && u.membership_status !== 'none' && (
+                            <button
+                              onClick={() => {
+                                const cleanPhone = u.phone.replace(/\D/g, '');
+                                const text = `Hola Guerrero(a) ${u.username}, te saludamos de Valhala Gym ⚔️. Te recordamos que tu mensualidad vence el ${u.membership_end_date || 'pronto'}. ¡No detengas tu entrenamiento en el templo de la fuerza!`;
+                                window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(text)}`, '_blank');
+                              }}
+                              style={{
+                                marginTop: '6px', background: '#25D366', color: '#fff', border: 'none', borderRadius: '6px',
+                                padding: '3px 8px', fontSize: '0.68rem', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', alignSelf: 'start', transition: 'background 0.2s'
+                              }}
+                              onMouseEnter={e => e.currentTarget.style.background = '#20ba5a'}
+                              onMouseLeave={e => e.currentTarget.style.background = '#25D366'}
+                            >
+                              💬 Enviar Recordatorio
+                            </button>
+                          )}
+                        </div>
+                      ) : (
+                        '—'
+                      )}
+                    </td>
                     <td style={{ ...tdStyle, color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem', maxWidth: '200px', whiteSpace: 'normal' }}>
                       {u.medical_conditions ? <div style={{ color: '#f87171' }}>⚠️ {u.medical_conditions}</div> : null}
                       {u.surgeries ? <div style={{ color: '#fbbf24' }}>✂️ {u.surgeries}</div> : null}
@@ -798,7 +928,7 @@ export default function Admin({ products, setProducts, plans, setPlans, features
                     </td>
                   </tr>
                 ))}
-                {users.length === 0 && <EmptyRow cols={4} msg="Sin usuarios registrados" />}
+                {users.length === 0 && <EmptyRow cols={6} msg="Sin usuarios registrados" />}
               </AdminTable>
 
               {/* Create/Edit user form */}
@@ -861,11 +991,187 @@ export default function Admin({ products, setProducts, plans, setPlans, features
                         <label style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.7rem', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Condiciones Médicas / Lesiones</label>
                         <textarea value={userForm.medical_conditions} onChange={e => setUserForm({ ...userForm, medical_conditions: e.target.value })} placeholder="Ej: Hipertensión, asma, escoliosis leve..." style={{ ...inputStyle, minHeight: '60px', resize: 'vertical' }} />
                       </div>
+
+                      <h4 style={{ color: '#14b8a6', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '1px', margin: '12px 0 0 0' }}>⚔️ Plan y Estatus de Membresía</h4>
+                      
+                      <div className="grid-responsive-2" style={{ gap: '12px' }}>
+                        <div>
+                          <label style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.7rem', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Plan Asignado</label>
+                          <select value={userForm.membership_plan_id || ''} onChange={e => setUserForm({ ...userForm, membership_plan_id: e.target.value })} style={{ ...inputStyle, cursor: 'pointer' }}>
+                            <option value="">Sin Plan / Inactivo</option>
+                            {plans.map(p => (
+                              <option key={p.id} value={p.id}>{p.name} (${p.price})</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.7rem', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Estado Membresía</label>
+                          <select value={userForm.membership_status || 'none'} onChange={e => setUserForm({ ...userForm, membership_status: e.target.value })} style={{ ...inputStyle, cursor: 'pointer' }}>
+                            <option value="none">Sin plan / Inactiva</option>
+                            <option value="active">Activa ✓</option>
+                            <option value="expired">Vencida ❌</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="grid-responsive-2" style={{ gap: '12px' }}>
+                        <div>
+                          <label style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.7rem', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Inicio del Período</label>
+                          <input type="date" value={userForm.membership_start_date || ''} onChange={e => setUserForm({ ...userForm, membership_start_date: e.target.value })} style={inputStyle} />
+                        </div>
+                        <div>
+                          <label style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.7rem', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Vencimiento Período</label>
+                          <input type="date" value={userForm.membership_end_date || ''} onChange={e => setUserForm({ ...userForm, membership_end_date: e.target.value })} style={inputStyle} />
+                        </div>
+                      </div>
                     </div>
                   )}
 
                   <button type="submit" style={{ ...primaryBtn, width: '100%', marginTop: '4px' }}>
                     {editUserId ? '💾 Guardar Cambios' : 'Registrar Guerrero ⚔️'}
+                  </button>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* ── PAYMENTS & INCOMES ── */}
+          {activeSection === 'payments' && (
+            <div className="grid-responsive-sidebar-right-sm" style={{ alignItems: 'start' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                
+                {/* Financial Summary Cards */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
+                  <div style={{ background: 'linear-gradient(135deg, rgba(20,184,166,0.1), rgba(20,184,166,0.02))', border: '1px solid rgba(20,184,166,0.2)', borderRadius: '16px', padding: '20px' }}>
+                    <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.75rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '1px' }}>Ingresos Totales (Membresías)</div>
+                    <div style={{ color: '#5eead4', fontSize: '2rem', fontWeight: '900', fontFamily: 'var(--font-heading)', marginTop: '8px' }}>
+                      ${totalPaymentsRevenue.toFixed(2)} USD
+                    </div>
+                  </div>
+
+                  <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '16px', padding: '20px' }}>
+                    <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.75rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '1px' }}>Cobros Registrados</div>
+                    <div style={{ color: '#fff', fontSize: '2rem', fontWeight: '900', fontFamily: 'var(--font-heading)', marginTop: '8px' }}>
+                      {payments.length} transacciones
+                    </div>
+                  </div>
+
+                  <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '16px', padding: '20px' }}>
+                    <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.75rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '1px' }}>Ingresos de Este Mes</div>
+                    <div style={{ color: '#34d399', fontSize: '2rem', fontWeight: '900', fontFamily: 'var(--font-heading)', marginTop: '8px' }}>
+                      ${(() => {
+                        const currentMonth = new Date().toISOString().substring(0, 7);
+                        return payments.filter(p => p.payment_date && p.payment_date.startsWith(currentMonth)).reduce((sum, p) => sum + p.amount, 0).toFixed(2);
+                      })()} USD
+                    </div>
+                  </div>
+                </div>
+
+                {/* Monthly Income Breakdown */}
+                <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '16px', padding: '20px' }}>
+                  <h4 style={{ color: '#fff', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '1px', margin: '0 0 16px 0' }}>📊 Desglose de Ingresos por Mes</h4>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    {(() => {
+                      const monthly = {};
+                      payments.forEach(p => {
+                        const m = p.payment_date ? p.payment_date.substring(0, 7) : 'Sin fecha';
+                        monthly[m] = (monthly[m] || 0) + p.amount;
+                      });
+                      const sortedMonths = Object.keys(monthly).sort().reverse();
+                      if (sortedMonths.length === 0) return <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.8rem', margin: 0 }}>Aún no hay cobros registrados.</p>;
+                      
+                      return sortedMonths.map(m => (
+                        <div key={m} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '10px' }}>
+                          <span style={{ color: '#fff', fontWeight: '600', fontSize: '0.85rem' }}>{m}</span>
+                          <span style={{ color: '#34d399', fontWeight: '700', fontSize: '0.9rem' }}>${monthly[m].toFixed(2)} USD</span>
+                        </div>
+                      ));
+                    })()}
+                  </div>
+                </div>
+
+                {/* Payments Table */}
+                <AdminTable title="Historial de Cobros de Mensualidades" columns={['Fecha', 'Guerrero', 'Plan', 'Monto', 'Notas', 'Acciones']}>
+                  {payments.map(p => (
+                    <tr key={p.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}
+                      onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                    >
+                      <td style={{ ...tdStyle, color: '#fff', fontSize: '0.85rem', fontWeight: '600' }}>{p.payment_date}</td>
+                      <td style={{ ...tdStyle, color: '#e2e8f0', fontSize: '0.85rem' }}>{p.username}</td>
+                      <td style={tdStyle}>
+                        <span style={{ background: 'rgba(99,102,241,0.12)', color: '#818cf8', border: '1px solid rgba(99,102,241,0.2)', padding: '2px 8px', borderRadius: '8px', fontSize: '0.72rem', fontWeight: '700' }}>
+                          {p.plan_name}
+                        </span>
+                      </td>
+                      <td style={{ ...tdStyle, color: '#34d399', fontSize: '0.875rem', fontWeight: '700' }}>${p.amount.toFixed(2)} USD</td>
+                      <td style={{ ...tdStyle, color: 'rgba(255,255,255,0.5)', fontSize: '0.75rem', maxWidth: '150px', whiteSpace: 'normal' }}>{p.notes || '—'}</td>
+                      <td style={{ ...tdStyle, textAlign: 'center' }}>
+                        <button onClick={() => handleDeletePayment(p.id)} style={{ ...btnStyle, background: 'rgba(239,68,68,0.08)', color: '#f87171', border: '1px solid rgba(239,68,68,0.2)' }}>Eliminar</button>
+                      </td>
+                    </tr>
+                  ))}
+                  {payments.length === 0 && <EmptyRow cols={6} msg="Sin cobros registrados" />}
+                </AdminTable>
+              </div>
+
+              {/* Register Payment Form */}
+              <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '16px', overflow: 'hidden' }}>
+                <div style={{ padding: '20px 24px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                  <h3 style={{ color: '#fff', fontSize: '0.95rem', fontWeight: '700', margin: 0 }}>💰 Registrar Cobro de Mensualidad</h3>
+                  <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.75rem', marginTop: '4px', marginBottom: 0 }}>Esto renovará la membresía del usuario por 30 días</p>
+                </div>
+                
+                <form onSubmit={handleSavePayment} style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  {paymentError && <div style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', color: '#fca5a5', padding: '10px 14px', borderRadius: '8px', fontSize: '0.8rem' }}>{paymentError}</div>}
+                  {paymentSuccess && <div style={{ background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.3)', color: '#6ee7b7', padding: '10px 14px', borderRadius: '8px', fontSize: '0.8rem' }}>{paymentSuccess}</div>}
+
+                  <div>
+                    <label style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem', fontWeight: '600', letterSpacing: '0.5px', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>Guerrero (Socio)</label>
+                    <select required value={paymentForm.user_id} onChange={e => setPaymentForm({ ...paymentForm, user_id: e.target.value })} style={{ ...inputStyle, cursor: 'pointer' }}>
+                      <option value="">-- Selecciona un guerrero --</option>
+                      {users.filter(u => u.role === 'user').map(u => (
+                        <option key={u.id} value={u.id}>
+                          {u.username} {u.phone ? `(${u.phone})` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem', fontWeight: '600', letterSpacing: '0.5px', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>Plan a Renovar</label>
+                    <select required value={paymentForm.plan_id} onChange={e => {
+                      const selectedPlan = plans.find(p => p.id === e.target.value);
+                      setPaymentForm({
+                        ...paymentForm,
+                        plan_id: e.target.value,
+                        amount: selectedPlan ? selectedPlan.price.toString() : ''
+                      });
+                    }} style={{ ...inputStyle, cursor: 'pointer' }}>
+                      <option value="">-- Selecciona un plan --</option>
+                      {plans.map(p => (
+                        <option key={p.id} value={p.id}>{p.name} (${p.price} USD)</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem', fontWeight: '600', letterSpacing: '0.5px', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>Monto Pagado ($ USD)</label>
+                    <input type="number" step="0.01" required value={paymentForm.amount} onChange={e => setPaymentForm({ ...paymentForm, amount: e.target.value })} placeholder="Ej: 39.99" style={inputStyle} />
+                  </div>
+
+                  <div>
+                    <label style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem', fontWeight: '600', letterSpacing: '0.5px', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>Fecha de Pago</label>
+                    <input type="date" required value={paymentForm.payment_date} onChange={e => setPaymentForm({ ...paymentForm, payment_date: e.target.value })} style={inputStyle} />
+                  </div>
+
+                  <div>
+                    <label style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem', fontWeight: '600', letterSpacing: '0.5px', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>Notas o Comentario</label>
+                    <textarea value={paymentForm.notes} onChange={e => setPaymentForm({ ...paymentForm, notes: e.target.value })} placeholder="Ej: Pago en efectivo barra, transferencia, etc." style={{ ...inputStyle, minHeight: '60px', resize: 'vertical' }} />
+                  </div>
+
+                  <button type="submit" style={{ ...primaryBtn, width: '100%', marginTop: '4px' }}>
+                    Registrar Cobro y Activar 💰
                   </button>
                 </form>
               </div>

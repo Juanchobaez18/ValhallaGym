@@ -20,7 +20,38 @@ export default function UserPanel({ currentUser, products, orders, setOrders, on
   const [measurements, setMeasurements] = useState([]);
   const [loadingMeas, setLoadingMeas] = useState(false);
 
+  // Notifications state
+  const [notifications, setNotifications] = useState([]);
+
+  const fetchMyNotifications = async () => {
+    try {
+      const token = localStorage.getItem('valhalla_token');
+      const res = await fetch(`${API_BASE_URL}/api/notifications/my`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) setNotifications(await res.json());
+    } catch (err) {
+      console.error('Error fetching notifications:', err);
+    }
+  };
+
+  const markAsRead = async (id) => {
+    try {
+      const token = localStorage.getItem('valhalla_token');
+      const res = await fetch(`${API_BASE_URL}/api/notifications/${id}/read`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: 1 } : n));
+      }
+    } catch (err) {
+      console.error('Error marking notification as read:', err);
+    }
+  };
+
   useEffect(() => {
+    fetchMyNotifications();
     if (activeTab === 'progress') fetchMyMeasurements();
   }, [activeTab]);
 
@@ -129,7 +160,7 @@ export default function UserPanel({ currentUser, products, orders, setOrders, on
       const hm = h / 100;
       const bmi = w / (hm * hm);
       r.bmi = bmi.toFixed(1);
-      if (bmi < 18.5) r.bmiCat = { label: 'Bajo peso', color: '#60a5fa', bg: 'rgba(96,165,250,0.12)' };
+      if (bmi < 18.5) r.bmiCat = { label: 'Bajo peso', color: '#4ade80', bg: 'rgba(74,222,128,0.12)' };
       else if (bmi < 25) r.bmiCat = { label: 'Normal ✓', color: '#34d399', bg: 'rgba(52,211,153,0.12)' };
       else if (bmi < 30) r.bmiCat = { label: 'Sobrepeso', color: '#fbbf24', bg: 'rgba(251,191,36,0.12)' };
       else if (bmi < 35) r.bmiCat = { label: 'Obesidad I', color: '#f87171', bg: 'rgba(248,113,113,0.12)' };
@@ -158,7 +189,7 @@ export default function UserPanel({ currentUser, products, orders, setOrders, on
     if (wt && h) {
       const ict = wt / h;
       r.ict = ict.toFixed(2);
-      if (ict < 0.40) r.ictRisk = { label: 'Muy delgado', color: '#60a5fa', bg: 'rgba(96,165,250,0.12)' };
+      if (ict < 0.40) r.ictRisk = { label: 'Muy delgado', color: '#4ade80', bg: 'rgba(74,222,128,0.12)' };
       else if (ict < 0.50) r.ictRisk = { label: 'Saludable ✓', color: '#34d399', bg: 'rgba(52,211,153,0.12)' };
       else if (ict < 0.60) r.ictRisk = { label: 'Sobrepeso', color: '#fbbf24', bg: 'rgba(251,191,36,0.12)' };
       else r.ictRisk = { label: 'Obesidad', color: '#f87171', bg: 'rgba(248,113,113,0.12)' };
@@ -205,8 +236,10 @@ export default function UserPanel({ currentUser, products, orders, setOrders, on
     return r;
   };
 
+  const unreadNotifications = notifications.filter(n => !n.is_read).length;
   const tabs = [
     { id: 'progress', label: '📊 Mi Evolución' },
+    { id: 'notifications', label: '🔔 Alertas', count: unreadNotifications > 0 ? unreadNotifications : undefined },
     { id: 'cafe', label: '☕ Pedir a la Barra' },
     { id: 'orders', label: '📜 Mis Pedidos', count: orders.length },
   ];
@@ -302,6 +335,44 @@ export default function UserPanel({ currentUser, products, orders, setOrders, on
           </div>
         </div>
 
+        {/* Banner de Membresía */}
+        {(() => {
+          if (!currentUser?.membership_end_date) return null;
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          const end = new Date(currentUser.membership_end_date);
+          end.setHours(0, 0, 0, 0);
+          const diffTime = end.getTime() - today.getTime();
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+          
+          let alertColor = 'var(--color-teal-bright)';
+          let alertBg = 'rgba(20, 184, 166, 0.05)';
+          let alertBorder = 'rgba(20, 184, 166, 0.2)';
+          let textMsg = `⚔️ Membresía Activa. Tu mensualidad vence el ${currentUser.membership_end_date}.`;
+
+          if (currentUser.membership_status === 'expired' || diffDays < 0) {
+            alertColor = '#f87171';
+            alertBg = 'rgba(239, 68, 68, 0.08)';
+            alertBorder = 'rgba(239, 68, 68, 0.3)';
+            textMsg = `🚨 Membresía Vencida el ${currentUser.membership_end_date}. Por favor acude a recepción a registrar tu pago.`;
+          } else if (diffDays <= 3) {
+            alertColor = '#fbbf24';
+            alertBg = 'rgba(251, 191, 36, 0.08)';
+            alertBorder = 'rgba(251, 191, 36, 0.3)';
+            textMsg = `⚠️ Tu mensualidad vence en ${diffDays === 0 ? 'hoy' : diffDays + ' día(s)'} (${currentUser.membership_end_date}). Registra tu pago en recepción.`;
+          }
+
+          return (
+            <div style={{
+              background: alertBg, border: `1px solid ${alertBorder}`, color: alertColor,
+              padding: '14px 20px', borderRadius: '12px', fontSize: '0.85rem', fontWeight: '600',
+              textAlign: 'center', marginBottom: '24px', letterSpacing: '0.5px'
+            }}>
+              {textMsg}
+            </div>
+          );
+        })()}
+
         {/* Tab Nav */}
         <div style={{ display: 'flex', gap: '8px', marginBottom: '32px', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0', justifyContent: 'center' }}>
           {tabs.map(tab => (
@@ -323,6 +394,48 @@ export default function UserPanel({ currentUser, products, orders, setOrders, on
             </button>
           ))}
         </div>
+
+        {/* ── NOTIFICATIONS TAB ── */}
+        {activeTab === 'notifications' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '600px', margin: '0 auto' }}>
+            <h3 style={{ color: '#fff', fontSize: '1.2rem', fontFamily: 'var(--font-heading)', textTransform: 'uppercase', fontStyle: 'italic', letterSpacing: '1px', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '12px', margin: 0 }}>
+              🔔 Bitácora del Templo (Notificaciones)
+            </h3>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {notifications.map(n => (
+                <div key={n.id} style={{
+                  background: n.is_read ? 'rgba(255,255,255,0.02)' : 'linear-gradient(135deg, rgba(20,184,166,0.05), rgba(255,255,255,0.01))',
+                  border: `1px solid ${n.is_read ? 'rgba(255,255,255,0.05)' : 'rgba(20,184,166,0.2)'}`,
+                  padding: '16px 20px', borderRadius: '12px', position: 'relative', display: 'flex', flexDirection: 'column', gap: '8px'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
+                    <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.35)', fontWeight: '700' }}>
+                      {formatDate(n.date)}
+                    </span>
+                    {!n.is_read && (
+                      <button
+                        onClick={() => markAsRead(n.id)}
+                        style={{
+                          background: 'rgba(20,184,166,0.15)', color: '#5eead4', border: '1px solid rgba(20,184,166,0.25)',
+                          padding: '2px 8px', borderRadius: '4px', fontSize: '0.65rem', fontWeight: '700', cursor: 'pointer'
+                        }}
+                      >
+                        Marcar como leída
+                      </button>
+                    )}
+                  </div>
+                  <p style={{ color: '#fff', fontSize: '0.88rem', margin: 0, lineHeight: '1.4' }}>{n.message}</p>
+                </div>
+              ))}
+              {notifications.length === 0 && (
+                <div style={{ textAlign: 'center', padding: '40px', color: 'rgba(255,255,255,0.3)', fontSize: '0.9rem', background: 'rgba(255,255,255,0.01)', border: '1px dotted rgba(255,255,255,0.05)', borderRadius: '12px' }}>
+                  ⚔️ No hay avisos por el momento. ¡Sigue entrenando duro!
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* ── CAFE TAB ── */}
         {activeTab === 'cafe' && (() => {
