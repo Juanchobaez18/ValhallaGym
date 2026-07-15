@@ -101,8 +101,8 @@ export default function Hero({ onJoinHorde, onExploreShop }) {
             </svg>
 
             {/* Logo in the center of the giant shield */}
-            <div className="giant-shield">
-              <Logo size={290} showText={false} />
+            <div className="giant-shield" style={{ marginTop: '-50px' }}>
+              <Logo size={360} showText={false} />
             </div>
             
             {/* Floating runes decorations */}
