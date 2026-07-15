@@ -1037,6 +1037,7 @@ export default function Admin({ products, setProducts, plans, setPlans, features
                         <div>
                           <label style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.7rem', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Inicio del Período</label>
                           <input type="date" value={userForm.membership_start_date || ''} onChange={e => setUserForm({ ...userForm, membership_start_date: e.target.value })} style={inputStyle} />
+                        </div>
                       </div>
                     </div>
                   )}
